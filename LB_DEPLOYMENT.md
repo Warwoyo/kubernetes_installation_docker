@@ -75,8 +75,7 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 5
 EOF
-
-```markdown
+```
 # Load Balancing for Login Web Application
 
 This guide demonstrates how to set up load balancing for the login web application to distribute traffic across multiple frontend containers.
