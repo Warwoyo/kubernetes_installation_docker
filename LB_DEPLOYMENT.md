@@ -369,7 +369,12 @@ kubectl describe ingress login-app-ingress
 
 # Check endpoints for the service
 kubectl get endpoints login-app
-```
+
+#Database error: Restart the web application deployment
+kubectl rollout restart deployment login-app
+
+# Restart MySQL deployment
+kubectl rollout restart deployment mysql
 
 This completes the setup of load balancing for the login web application.
 ```
