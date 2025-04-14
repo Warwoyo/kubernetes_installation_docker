@@ -283,3 +283,44 @@ kubectl apply -f k8s-dash.yaml
      kubectl create token widhi -n kube-system
 
 
+11. Troubleshoot Dashboard not working
+```bash
+# Delete the exposed service first
+kubectl delete svc k8s-dash-svc -n kubernetes-dashboard
+
+# Uninstall the dashboard using Helm
+helm uninstall kubernetes-dashboard -n kubernetes-dashboard
+
+# Delete any remaining resources in the namespace
+kubectl delete namespace kubernetes-dashboard --grace-period=0 --force
+
+# Verify all resources are gone
+kubectl get all -n kubernetes-dashboard
+
+helm install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard \
+  --create-namespace \
+  --namespace kubernetes-dashboard
+
+# Verify pods are running properly
+kubectl get pods -n kubernetes-dashboard
+
+# Wait for all pods to be in Running state
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=kubernetes-dashboard -n kubernetes-dashboard --timeout=120s
+
+# Expose the dashboard using NodePort
+kubectl expose deployment kubernetes-dashboard-kong --name k8s-dash-svc --type NodePort --port 443 --target-port 8443 -n kubernetes-dashboard
+
+# Get the assigned port
+kubectl get svc k8s-dash-svc -n kubernetes-dashboard
+
+# Verify the service account exists
+kubectl get serviceaccount widhi -n kube-system
+
+# If it doesn't exist, apply the YAML again
+kubectl apply -f k8s-dash.yaml
+
+# Generate a new token
+kubectl create token widhi -n kube-system --duration=8760h
+
+
+```
