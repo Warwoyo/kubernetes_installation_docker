@@ -283,3 +283,121 @@ kubectl rollout restart deployment metrics-server -n kube-system
 Autoscaling should now be functioning, with pods scaling up when CPU utilization exceeds 80% and scaling down when it drops below 50%, maintaining between 2 and 4 replicas based on the current load.
 
 
+# Accessing the Login Application from Client Machines
+
+Yes, your application is already set up with load balancing capabilities, but let me explain all the available access methods:
+
+## Current Access Methods
+
+### 1. NodePort Service (Basic Access)
+The login application is exposed via a NodePort service on port 30080:
+
+```bash
+# Check the NodePort service details
+kubectl get svc login-app
+
+# Example output:
+# login-app   NodePort   10.x.x.x   <none>   80:30080/TCP   24h
+```
+
+**Access URL:** `http://<any-node-ip>:30080`
+
+### 2. Ingress Controller (Load Balanced Access)
+From your LB_DEPLOYMENT.md file, you have an Nginx Ingress controller set up that provides more advanced load balancing features:
+
+```bash
+# Check the Ingress details
+kubectl get ing login-app-ingress
+
+# Check the Ingress controller service
+kubectl get svc -n ingress-nginx
+```
+
+**Access URL:** `http://<any-node-ip>:30081`
+
+## Connecting from a Client Machine
+
+To access from any client machine:
+
+1. **Direct NodePort Access:**
+   ```
+   http://<kubernetes-node-ip>:30080
+   ```
+
+2. **Through Load Balancer (Ingress):**
+   ```
+   http://<kubernetes-node-ip>:30081
+   ```
+
+3. **If using DNS:**
+   If you have configured DNS for your cluster, you can access using:
+   ```
+   http://your-configured-domain/
+   ```
+
+## Additional Configuration Options
+
+### 1. External Load Balancer (Cloud Environments)
+
+If running in a cloud provider (AWS, GCP, Azure), you can create a true external load balancer:
+
+```bash
+# Update the service type to LoadBalancer
+kubectl patch svc login-app -p '{"spec":{"type":"LoadBalancer"}}'
+```
+
+### 2. MetalLB (For On-premises Clusters)
+
+For on-premises clusters, you can install MetalLB to provide external load balancing:
+
+```bash
+# Install MetalLB
+kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.13.7/config/manifests/metallb-native.yaml
+
+# Configure IP address pool (customize the addresses)
+cat <<EOF | kubectl apply -f -
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: first-pool
+  namespace: metallb-system
+spec:
+  addresses:
+  - 192.168.1.240-192.168.1.250
+EOF
+
+# Configure L2 announcement
+cat <<EOF | kubectl apply -f -
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: example
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+  - first-pool
+EOF
+```
+
+### 3. Verify Current Load Balancer Status
+
+```bash
+# Check if your ingress controller is running
+kubectl get pods -n ingress-nginx
+
+# Check if your services are properly mapped
+kubectl get ing
+```
+
+To test if load balancing is working correctly between your pods:
+
+```bash
+# Run multiple requests to see different pods handling the requests
+for i in {1..10}; do 
+  curl -s http://<node-ip>:30081/server-info
+  echo ""
+  sleep 1
+done
+```
+
+This should show requests being distributed across different pods, confirming that load balancing is working correctly.
