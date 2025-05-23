@@ -7,12 +7,6 @@ pipeline {
   }
 
   stages {
-    stage('Checkout') {
-      steps {
-        git branch: 'master', url: 'https://github.com/Warwoyo/kubernetes_installation_docker.git'
-      }
-    }
-
     stage('Build Docker Image') {
       steps {
         dir('k8s-login-app/app') {
