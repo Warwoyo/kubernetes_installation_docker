@@ -1,0 +1,43 @@
+pipeline {
+  agent any
+
+  environment {
+    DOCKER_IMAGE = 'wiyuwarwoyo/login-app'
+    DOCKER_TAG = 'latest'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        git branch: 'main', url: 'https://github.com/Warwoyo/kubernetes_installation_docker.git'
+      }
+    }
+
+    stage('Build Docker Image') {
+      steps {
+        dir('k8s-login-app/app') {
+          sh "docker build -t $DOCKER_IMAGE:$DOCKER_TAG ."
+        }
+      }
+    }
+
+    stage('Push Docker Image') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+          sh """
+            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+            docker push $DOCKER_IMAGE:$DOCKER_TAG
+          """
+        }
+      }
+    }
+
+    stage('Deploy to Kubernetes') {
+      steps {
+        withKubeConfig(credentialsId: 'kubeconfig') {
+          sh "kubectl set image deployment/login-app login-app=$DOCKER_IMAGE:$DOCKER_TAG"
+        }
+      }
+    }
+  }
+}
